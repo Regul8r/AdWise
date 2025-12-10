@@ -1056,8 +1056,11 @@ Provide a helpful, conversational response. Be specific and give actionable advi
                 api_key=st.secrets["ANTHROPIC_API_KEY"]
             )
             
-            # Add user message to history
-            st.session_state.chat_history.append({"role": "user", "content": context})
+            # Add user's QUESTION to display history (not the full context)
+            st.session_state.chat_history.append({"role": "user", "content": user_question})
+            
+            # Build messages for API (include context only for Claude, not displayed)
+            api_messages = [{"role": "user", "content": context}]
             
             with st.chat_message("assistant"):
                 message_placeholder = st.empty()
@@ -1079,7 +1082,7 @@ Provide a helpful, conversational response. Be specific and give actionable advi
                             "7. Keep paragraphs short (2-3 sentences max). "
                             "8. Be encouraging and supportive."
                         ),
-                        messages=st.session_state.chat_history
+                        messages=api_messages
                     ) as stream:
                         buffer = ""
                         buffer_count = 0
@@ -1095,7 +1098,7 @@ Provide a helpful, conversational response. Be specific and give actionable advi
                 
                 message_placeholder.markdown(full_response)
                 
-                # Add assistant response to history
+                # Add assistant response to display history
                 st.session_state.chat_history.append({"role": "assistant", "content": full_response})
 
         except KeyError:
