@@ -17,7 +17,7 @@ import numpy as np
 # PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="Marketing Budget Optimizer",
+    page_title="AdWise - Smart Marketing Budgets",
     page_icon="📊",
     layout="wide"
 )
@@ -181,6 +181,15 @@ st.session_state['product_info'] = {
 # SIDEBAR - DATA UPLOAD
 # ============================================================================
 st.sidebar.markdown("---")
+with st.sidebar:
+    st.markdown("### ⚙️ View Mode")
+    view_mode = st.radio(
+        "Choose your experience:",
+        ["Simple", "Advanced"],
+        index=0,
+        horizontal=True,
+        help="Simple mode hides technical details"
+    )
 st.sidebar.header("📁 Data Input")
 
 # Provide sample CSV download FIRST
@@ -451,10 +460,11 @@ df['Cluster'], X_pct, scaler, kmeans = perform_clustering(df, channels, sales_co
 
 # Cluster names
 cluster_names = {
-    0: "Influencer-Heavy Strategy",
-    1: "Billboard-Focused Strategy", 
-    2: "Google Ads-Dominant Strategy",
-    3: "Affiliate-Focused Strategy ⭐"
+    0: "Digital-First Strategy",
+    1: "Balanced Mix Strategy", 
+    2: "Traditional Media Strategy",
+    3: "Social-Heavy Strategy",
+    4: "Influencer-Focused Strategy"
 }
 
 # Cluster performance
@@ -626,11 +636,11 @@ def get_channel_recommendations(product_info):
 # ============================================================================
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🎯 Your Strategy", 
-    "📊 Campaign Builder",
-    "🔮 Budget Optimizer",
-    "📈 Performance Analysis",
-    "💬 AI Advisor"  
+    "📋 Your Strategy", 
+    "🎯 Campaign Builder", 
+    "💰 Budget Optimizer", 
+    "📈 Performance", 
+    "💬 Ask AI"
 ])
 
 # ============================================================================
@@ -815,7 +825,7 @@ with tab2:
 
 with tab3:
     st.header("🔮 AI Budget Optimizer")
-    st.write("Adjust your budget allocation and see predicted outcomes in real-time!")
+    st.info("💡 Adjust the sliders to see how different budget splits could impact your results.")
     
     col1, col2 = st.columns([1, 1])
     
@@ -850,121 +860,115 @@ with tab3:
                       f"{new_avg_sales:.0f} units",
                       f"{sales_change:+.0f} ({pct_change:+.1f}%)")
             
-            # Show breakdown
-            st.subheader("Budget Changes")
-            budget_df = pd.DataFrame({
-                'Channel': channels,
-                'Current ($)': [tv_input, billboard_input, google_input, 
-                               social_input, influencer_input, affiliate_input],
-                'Optimized ($)': [tv_opt, billboard_opt, google_opt,
-                                 social_opt, influencer_opt, affiliate_opt],
-                'Change ($)': [tv_opt - tv_input, billboard_opt - billboard_input,
-                              google_opt - google_input, social_opt - social_input,
-                              influencer_opt - influencer_input, affiliate_opt - affiliate_input]
-            })
-            st.dataframe(budget_df.style.background_gradient(subset=['Change ($)'], cmap='RdYlGn'))
-
+            # ADVANCED MODE ONLY - Show detailed breakdown
+            if view_mode == "Advanced":
+                st.subheader("Budget Changes")
+                budget_df = pd.DataFrame({
+                    'Channel': channels,
+                    'Current ($)': [tv_input, billboard_input, google_input, 
+                                   social_input, influencer_input, affiliate_input],
+                    'Optimized ($)': [tv_opt, billboard_opt, google_opt,
+                                     social_opt, influencer_opt, affiliate_opt],
+                    'Change ($)': [tv_opt - tv_input, billboard_opt - billboard_input,
+                                  google_opt - google_input, social_opt - social_input,
+                                  influencer_opt - influencer_input, affiliate_opt - affiliate_input]
+                })
+                st.dataframe(budget_df.style.background_gradient(subset=['Change ($)'], cmap='RdYlGn'))
 # ============================================================================
 # TAB 4: PERFORMANCE ANALYSIS
 # ============================================================================
 
 with tab4:
     st.header("📈 Detailed Performance Analysis")
-    
+    st.info("💡 This shows how your current strategy compares to other successful approaches.")
     st.subheader("Cluster Performance Summary")
     
-    # Create summary table
+    # Create summary table - EVERYONE SEES THIS
     summary_df = pd.DataFrame({
         'Strategy': [cluster_names[i] for i in range(4)],
         'Campaigns': cluster_stats['count'].values.astype(int),
         'Avg Sales': cluster_stats['mean'].values.astype(int),
         'Std Dev': cluster_stats['std'].values.astype(int),
     })
-    
     st.dataframe(summary_df, use_container_width=True)
     
-    # Visualize cluster performance
-    st.subheader("📊 Strategy Performance Comparison")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Bar chart of average sales by cluster
-        fig, ax = plt.subplots(figsize=(10, 6))
-        colors_list = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A']
-        bars = ax.bar(range(4), cluster_stats['mean'].values, 
-                     color=colors_list, edgecolor='black', alpha=0.7)
-        ax.set_xlabel('Cluster', fontsize=12)
-        ax.set_ylabel('Average Sales (units)', fontsize=12)
-        ax.set_title('Average Sales by Strategy Type', fontsize=14, fontweight='bold')
-        ax.set_xticks(range(4))
-        ax.set_xticklabels([f'C{i}' for i in range(4)])
+    # ADVANCED MODE ONLY - Charts and detailed breakdowns
+    if view_mode == "Advanced":
+        # Visualize cluster performance
+        st.subheader("📊 Strategy Performance Comparison")
+        col1, col2 = st.columns(2)
         
-        # Add value labels on bars
-        for i, bar in enumerate(bars):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{int(height)}',
-                   ha='center', va='bottom', fontsize=10, fontweight='bold')
+        with col1:
+            # Bar chart of average sales by cluster
+            fig, ax = plt.subplots(figsize=(10, 6))
+            colors_list = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A']
+            bars = ax.bar(range(4), cluster_stats['mean'].values, 
+                         color=colors_list, edgecolor='black', alpha=0.7)
+            ax.set_xlabel('Cluster', fontsize=12)
+            ax.set_ylabel('Average Sales (units)', fontsize=12)
+            ax.set_title('Average Sales by Strategy Type', fontsize=14, fontweight='bold')
+            ax.set_xticks(range(4))
+            ax.set_xticklabels([f'C{i}' for i in range(4)])
+            # Add value labels on bars
+            for i, bar in enumerate(bars):
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{int(height)}',
+                       ha='center', va='bottom', fontsize=10, fontweight='bold')
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close()
         
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
-    
-    with col2:
-        # Pie chart of cluster distribution
-        fig, ax = plt.subplots(figsize=(10, 6))
-        cluster_counts = df['Cluster'].value_counts().sort_index()
-        ax.pie(cluster_counts.values, labels=[f'Cluster {i}' for i in range(4)],
-               autopct='%1.1f%%', startangle=90, colors=colors_list)
-        ax.set_title('Campaign Distribution by Strategy', fontsize=14, fontweight='bold')
+        with col2:
+            # Pie chart of cluster distribution
+            fig, ax = plt.subplots(figsize=(10, 6))
+            cluster_counts = df['Cluster'].value_counts().sort_index()
+            ax.pie(cluster_counts.values, labels=[f'Cluster {i}' for i in range(4)],
+                   autopct='%1.1f%%', startangle=90, colors=colors_list)
+            ax.set_title('Campaign Distribution by Strategy', fontsize=14, fontweight='bold')
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close()
         
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
+        # Show detailed cluster breakdown
+        st.subheader("🔍 Detailed Cluster Breakdown")
+        for i in range(4):
+            with st.expander(f"📊 {cluster_names[i]} - Cluster {i}"):
+                cluster_data = df[df['Cluster'] == i]
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Campaigns", f"{len(cluster_data)}")
+                col2.metric("Avg Sales", f"{cluster_data[sales_column].mean():.0f} units")
+                col3.metric("Sales Range", f"{cluster_data[sales_column].min():.0f} - {cluster_data[sales_column].max():.0f}")
+                st.write("**Average Channel Spend:**")
+                avg_spend = cluster_data[channels].mean()
+                spend_df = pd.DataFrame({
+                    'Channel': channels,
+                    'Avg Spend ($)': avg_spend.values,
+                    '% of Total': (avg_spend / avg_spend.sum() * 100).values
+                })
+                st.dataframe(spend_df.style.format({
+                    'Avg Spend ($)': '${:,.0f}',
+                    '% of Total': '{:.1f}%'
+                }), use_container_width=True)
+        
+        # Show existing visualizations if available
+        st.markdown("---")
+        st.subheader("📈 Additional Analysis Visualizations")
+        viz_files = {
+            "Spend Distributions": "viz1_spend_distributions.png",
+            "Correlation Analysis": "viz2_correlation_and_trends.png",
+            "Cluster Results": "viz4_kmeans_results.png",
+            "PCA Analysis": "viz5_pca_analysis.png"
+        }
+        viz_option = st.selectbox("Select Visualization", list(viz_files.keys()))
+        try:
+            st.image(viz_files[viz_option], use_container_width=True)
+        except:
+            st.info(f"💡 Visualization '{viz_files[viz_option]}' not found. Run your analysis script to generate visualizations.")
     
-    # Show detailed cluster breakdown
-    st.subheader("🔍 Detailed Cluster Breakdown")
-    
-    for i in range(4):
-        with st.expander(f"📊 {cluster_names[i]} - Cluster {i}"):
-            cluster_data = df[df['Cluster'] == i]
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Campaigns", f"{len(cluster_data)}")
-            col2.metric("Avg Sales", f"{cluster_data[sales_column].mean():.0f} units")
-            col3.metric("Sales Range", f"{cluster_data[sales_column].min():.0f} - {cluster_data[sales_column].max():.0f}")
-            
-            st.write("**Average Channel Spend:**")
-            avg_spend = cluster_data[channels].mean()
-            spend_df = pd.DataFrame({
-                'Channel': channels,
-                'Avg Spend ($)': avg_spend.values,
-                '% of Total': (avg_spend / avg_spend.sum() * 100).values
-            })
-            st.dataframe(spend_df.style.format({
-                'Avg Spend ($)': '${:,.0f}',
-                '% of Total': '{:.1f}%'
-            }), use_container_width=True)
-    
-    # Show existing visualizations if available
-    st.markdown("---")
-    st.subheader("📈 Additional Analysis Visualizations")
-    
-    viz_files = {
-        "Spend Distributions": "viz1_spend_distributions.png",
-        "Correlation Analysis": "viz2_correlation_and_trends.png",
-        "Cluster Results": "viz4_kmeans_results.png",
-        "PCA Analysis": "viz5_pca_analysis.png"
-    }
-    
-    viz_option = st.selectbox("Select Visualization", list(viz_files.keys()))
-    
-    try:
-        st.image(viz_files[viz_option], use_container_width=True)
-    except:
-        st.info(f"💡 Visualization '{viz_files[viz_option]}' not found. Run your analysis script to generate visualizations.")
-
+    else:
+        # SIMPLE MODE - Just show a tip
+        st.info("💡 Switch to **Advanced** mode in the sidebar to see detailed charts and breakdowns.")
 
 # ============================================================================
 # TAB 5: AI ADVISOR (LLM Integration)
