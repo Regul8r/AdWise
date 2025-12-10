@@ -46,6 +46,50 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Welcome screen for first-time users
+if "onboarded" not in st.session_state:
+    st.session_state.onboarded = False
+
+if not st.session_state.onboarded:
+    st.markdown("""
+        <h1 style='text-align: center;'>📊 Welcome to AdWise!</h1>
+        <p style='text-align: center; font-size: 18px; color: gray;'>
+            Your AI-powered marketing budget advisor
+        </p>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("""
+            ### What AdWise Does:
+            
+            - 🎯 **Analyzes** your marketing spend
+            - 🔮 **Predicts** which budget mix works best  
+            - 💬 **Advises** you with AI-powered recommendations
+            
+            ---
+            
+            ### How to Use:
+            
+            1. Enter your product info in the sidebar
+            2. Upload your marketing data (or use our sample)
+            3. Explore the tabs to optimize your budget
+            
+            ---
+            
+            **No marketing experience needed.** AdWise explains everything in plain English.
+        """)
+        
+        st.markdown("")
+        
+        if st.button("🚀 Get Started", use_container_width=True):
+            st.session_state.onboarded = True
+            st.rerun()
+    
+    st.stop()  # Don't show the rest of the app until they click "Get Started"
+
 
 # ============================================================================
 # TITLE & INSTRUCTIONS
@@ -1041,23 +1085,34 @@ try:
         
         # Loading spinner while waiting for first token
         with st.spinner("🧠 Analyzing your marketing data..."):
-           with client.messages.stream(
-    model="claude-sonnet-4-5-20250929",
-    max_tokens=2048,
-    system=(
-        "You are an expert marketing budget advisor. "
-        "FORMAT RULES: Use ### for section headings. "
-        "Put a blank line between every paragraph. "
-        "Keep paragraphs to 2-3 sentences max. "
-        "Use bullet points for lists. "
-        "Never write long blocks of text. "
-        "Provide concise, actionable recommendations based on the user's data and strategy."
-    ),
-    messages=st.session_state.chat_history
-) as stream:
+            with client.messages.stream(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=2048,
+                system=(
+                    "You are a friendly marketing advisor for beginners. "
+                    "IMPORTANT RULES: "
+                    "1. Never use technical terms like 'cluster', 'PCA', 'K-means', or variable names like 'tv_input'. "
+                    "2. Use simple language a small business owner would understand. "
+                    "3. Instead of 'Cluster 2', say the strategy name like 'Balanced Strategy'. "
+                    "4. Instead of variable names, say 'your TV budget' or 'your social media spend'. "
+                    "5. Focus on actionable advice, not data analysis. "
+                    "6. Use headings with ### and bullet points. "
+                    "7. Keep paragraphs short (2-3 sentences max). "
+                    "8. Be encouraging and supportive."
+                ),
+                messages=st.session_state.chat_history
+            ) as stream:
+                buffer = ""
+                buffer_count = 0
                 for text in stream.text_stream:
-                    full_response += text
-                    message_placeholder.markdown(full_response + "▌")
+                    buffer += text
+                    buffer_count += 1
+                    if buffer_count >= 5:
+                        full_response += buffer
+                        message_placeholder.markdown(full_response + "▌")
+                        buffer = ""
+                        buffer_count = 0
+                full_response += buffer
         
         message_placeholder.markdown(full_response)
         
