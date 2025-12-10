@@ -973,11 +973,14 @@ with tab4:
 # ============================================================================
 # TAB 5: AI ADVISOR (LLM Integration)
 # ============================================================================
-
 with tab5:
     st.header("💬 Ask Your AI Marketing Advisor")
-    
     st.write("Get personalized explanations and recommendations based on your strategy and the data.")
+    
+    # Clear button at the top
+    if st.button("🗑️ Clear conversation"):
+        st.session_state.chat_history = []
+        st.rerun()
     
     # Quick action buttons
     col1, col2, col3 = st.columns(3)
@@ -997,11 +1000,11 @@ with tab5:
     st.markdown("---")
     
     # Initialize chat history
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
     
-    # Display chat history
-    for message in st.session_state.messages:
+    # Display previous messages
+    for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
@@ -1018,16 +1021,11 @@ with tab5:
         user_question = prompt if prompt else default_prompt
         
         # Add user message to chat
-        st.session_state.messages.append({"role": "user", "content": user_question})
-        
         with st.chat_message("user"):
             st.markdown(user_question)
         
         # Build context from current state
         product_info = st.session_state.get('product_info', {})
-        
-        # Check if user has entered budget
-        has_budget = 'user_cluster' in locals() and total_budget > 0
         
         context = f"""You are an expert marketing advisor helping a user optimize their advertising budget.
 
@@ -1041,96 +1039,72 @@ USER'S CONTEXT:
 DATA ANALYSIS FINDINGS:
 - Analyzed 300 real marketing campaigns
 - 4 strategy archetypes identified:
-  * Cluster 0: Influencer-Heavy (6,870 units avg)
-  * Cluster 1: Billboard-Focused (6,956 units avg)
-  * Cluster 2: Google Ads-Dominant (6,582 units avg - WORST)
-  * Cluster 3: Affiliate-Focused (7,774 units avg - BEST, 18% better than worst)
+  * Digital-First Strategy (6,870 units avg)
+  * Balanced Mix Strategy (6,956 units avg)
+  * Traditional Media Strategy (6,582 units avg)
+  * Influencer-Focused Strategy (7,774 units avg - BEST, 18% better)
 - Key finding: TV and Affiliate Marketing are the primary strategic differentiators
-- Product-specific strategies vary significantly by category
 
 USER QUESTION: {user_question}
 
-Provide a helpful, conversational response in 2-3 paragraphs. Be specific, reference the data findings when relevant, 
-and give actionable advice. Use plain language that a marketer without ML background would understand."""
+Provide a helpful, conversational response. Be specific and give actionable advice."""
 
-# AI Advisor Tab
-st.header("💬 Ask Your AI Marketing Advisor")
-st.write("Get personalized explanations and recommendations based on your strategy and the data.")
-
-# Clear button at the top
-if st.button("🗑️ Clear conversation"):
-    st.session_state.chat_history = []
-    st.rerun()
-
-
-
-# Initialize conversation history (put this near the top of your file with other session state)
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# Display previous messages
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Call Claude API
-try:
-    import anthropic
-    client = anthropic.Anthropic(
-        api_key=st.secrets["ANTHROPIC_API_KEY"]
-    )
-    
-    # Add user message to history
-    st.session_state.chat_history.append({"role": "user", "content": context})
-    
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        
-        # Loading spinner while waiting for first token
-        with st.spinner("🧠 Analyzing your marketing data..."):
-            with client.messages.stream(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=2048,
-                system=(
-                    "You are a friendly marketing advisor for beginners. "
-                    "IMPORTANT RULES: "
-                    "1. Never use technical terms like 'cluster', 'PCA', 'K-means', or variable names like 'tv_input'. "
-                    "2. Use simple language a small business owner would understand. "
-                    "3. Instead of 'Cluster 2', say the strategy name like 'Balanced Strategy'. "
-                    "4. Instead of variable names, say 'your TV budget' or 'your social media spend'. "
-                    "5. Focus on actionable advice, not data analysis. "
-                    "6. Use headings with ### and bullet points. "
-                    "7. Keep paragraphs short (2-3 sentences max). "
-                    "8. Be encouraging and supportive."
-                ),
-                messages=st.session_state.chat_history
-            ) as stream:
-                buffer = ""
-                buffer_count = 0
-                for text in stream.text_stream:
-                    buffer += text
-                    buffer_count += 1
-                    if buffer_count >= 5:
-                        full_response += buffer
-                        message_placeholder.markdown(full_response + "▌")
+        # Call Claude API
+        try:
+            import anthropic
+            client = anthropic.Anthropic(
+                api_key=st.secrets["ANTHROPIC_API_KEY"]
+            )
+            
+            # Add user message to history
+            st.session_state.chat_history.append({"role": "user", "content": context})
+            
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
+                
+                with st.spinner("🧠 Analyzing your marketing data..."):
+                    with client.messages.stream(
+                        model="claude-sonnet-4-5-20250929",
+                        max_tokens=2048,
+                        system=(
+                            "You are a friendly marketing advisor for beginners. "
+                            "IMPORTANT RULES: "
+                            "1. Never use technical terms like 'cluster', 'PCA', 'K-means', or variable names. "
+                            "2. Use simple language a small business owner would understand. "
+                            "3. Use strategy names like 'Balanced Strategy' not 'Cluster 2'. "
+                            "4. Say 'your TV budget' not 'tv_input'. "
+                            "5. Focus on actionable advice, not data analysis. "
+                            "6. Use headings with ### and bullet points. "
+                            "7. Keep paragraphs short (2-3 sentences max). "
+                            "8. Be encouraging and supportive."
+                        ),
+                        messages=st.session_state.chat_history
+                    ) as stream:
                         buffer = ""
                         buffer_count = 0
-                full_response += buffer
-        
-        message_placeholder.markdown(full_response)
-        
-        # Add assistant response to history
-        st.session_state.chat_history.append({"role": "assistant", "content": full_response})
+                        for text in stream.text_stream:
+                            buffer += text
+                            buffer_count += 1
+                            if buffer_count >= 5:
+                                full_response += buffer
+                                message_placeholder.markdown(full_response + "▌")
+                                buffer = ""
+                                buffer_count = 0
+                        full_response += buffer
+                
+                message_placeholder.markdown(full_response)
+                
+                # Add assistant response to history
+                st.session_state.chat_history.append({"role": "assistant", "content": full_response})
 
-except KeyError:
-    st.error("❌ API key not found!")
-    st.info("💡 Create a `.streamlit/secrets.toml` file with:")
-    st.code('ANTHROPIC_API_KEY = "sk-ant-..."')
+        except KeyError:
+            st.error("❌ API key not found!")
+            st.info("💡 Add your ANTHROPIC_API_KEY in Streamlit Cloud secrets")
 
-except Exception as e:
-    st.error(f"Error: {e}")
-    st.info("💡 Check that your API key is valid at https://console.anthropic.com/")
+        except Exception as e:
+            st.error(f"Error: {e}")
+            st.info("💡 Check that your API key is valid at https://console.anthropic.com/")
 
 # ============================================================================
 # FOOTER
